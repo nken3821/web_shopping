@@ -1,5 +1,6 @@
-use bcrypt::{DEFAULT_COST, hash, verify};
+use bcrypt::{DEFAULT_COST, hash};
 use diesel::MysqlConnection;
+use validator::ValidateEmail;
 
 use crate::enums::AppError;
 use crate::interface::{BaseRepository, BaseService};
@@ -19,9 +20,9 @@ pub struct UserCreateArgs {
 }
 
 pub struct UserUpdateArgs {
-    pub fullname: String,
-    pub email: String,
-    pub phone: String,
+    pub fullname: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
 }
 
 impl BaseService for UserService {
@@ -92,17 +93,26 @@ impl BaseService for UserService {
         model_id: i32,
         args: UserUpdateArgs,
     ) -> Result<UserInternal, AppError> {
-        if args.email.trim().is_empty()
-            && args.fullname.trim().is_empty()
-            && args.phone.trim().is_empty()
-        {
+        if args.email.is_none() && args.fullname.is_none() && args.phone.is_none() {
             return Err(AppError::ValidationError);
         }
 
-        if args.email.chars().any(char::is_whitespace)
-            || args.phone.chars().any(char::is_whitespace)
-        {
-            return Err(AppError::ValidationError);
+        if let Some(email) = args.email.as_ref() {
+            if email.trim().is_empty() || !email.validate_email() {
+                return Err(AppError::ValidationError);
+            }
+        }
+
+        if let Some(phone) = args.phone.as_ref() {
+            if phone.trim().is_empty() || phone.chars().any(char::is_whitespace) {
+                return Err(AppError::ValidationError);
+            }
+        }
+
+        if let Some(fullname) = args.fullname.as_ref() {
+            if fullname.trim().is_empty() {
+                return Err(AppError::ValidationError);
+            }
         }
 
         self.user_repo
@@ -113,9 +123,9 @@ impl BaseService for UserService {
             })?;
 
         let model = UpdateUser {
-            full_name: Some(args.fullname),
-            phone: Some(args.phone),
-            email: Some(args.email),
+            full_name: args.fullname,
+            phone: args.phone,
+            email: args.email,
         };
 
         self.user_repo
@@ -149,6 +159,10 @@ impl BaseService for UserService {
             return Err(AppError::ValidationError);
         }
 
+        if !args.email.validate_email() {
+            return Err(AppError::ValidationError);
+        }
+
         if args.email.chars().any(char::is_whitespace)
             || args.phone.chars().any(char::is_whitespace)
         {
@@ -165,7 +179,6 @@ impl BaseService for UserService {
             Err(_) => return Err(AppError::DatabaseError),
         }
 
-
         let username = self.get_email_prefix(&args.email);
 
         let password_hash =
@@ -179,7 +192,8 @@ impl BaseService for UserService {
             full_name: args.fullname,
         };
 
-        self.user_repo.create(model, connection)
+        self.user_repo
+            .create(model, connection)
             .map(|user| UserInternal {
                 id: user.id,
                 email: user.email,
@@ -190,47 +204,15 @@ impl BaseService for UserService {
                 updated_at: user.updated_at,
             })
             .map_err(|error| {
-            println!("CREATE USER DATABASE ERROR: {:?}", error);
-            AppError::DatabaseError
-        })
+                println!("CREATE USER DATABASE ERROR: {:?}", error);
+                AppError::DatabaseError
+            })
     }
 }
 
 impl UserService {
     pub fn new(user_repo: UserRepository) -> Self {
         Self { user_repo }
-    }
-
-    pub fn login(
-        &self,
-        connection: &mut MysqlConnection,
-        password: &str,
-        email: &str,
-    ) -> Result<UserInternal, AppError> {
-        let user = self
-            .user_repo
-            .find_by_email(email, connection)
-            .map_err(|error| match error {
-                diesel::result::Error::NotFound => AppError::UserNotFound,
-                _ => AppError::DatabaseError,
-            })?;
-
-        let valid =
-            verify(password, &user.password_hash).map_err(|_| AppError::AuthenticationError)?;
-
-        if !valid {
-            return Err(AppError::AuthenticationError);
-        }
-
-        Ok(user).map(|user| UserInternal {
-                id: user.id,
-                email: user.email,
-                full_name: user.full_name,
-                user_name: user.user_name,
-                phone: user.phone,
-                created_at: user.created_at,
-                updated_at: user.updated_at,
-            })
     }
 
     fn get_email_prefix(&self, email: &str) -> String {

@@ -10,3 +10,6 @@ rocket = { version = "0.5.1", features = ["json"] }
 serde_json = "1.0.151"
 chrono = { version = "0.4.45", features = ["serde"] }
 bcrypt = "0.19.3"
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
+serde = { version = "1.0.229", features = ["derive"] }
+validator = { version = "0.21.0", features = ["derive"] }

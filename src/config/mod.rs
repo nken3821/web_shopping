@@ -1,3 +1,3 @@
 pub mod database;
 
-pub use database::{connect};
+pub use database::{Connection, connect};

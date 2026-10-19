@@ -1,5 +1,6 @@
-use rocket::{get, routes, serde::json::Json};
-use serde_json::{Value, json};
+use rocket::{routes};
+
+use crate::routes::{login, register, get_users, get_user, delete_user, update_user, profile, update_profile};
 
 mod config;
 mod models;
@@ -9,22 +10,15 @@ mod internals;
 mod interface;
 mod service;
 mod enums;
-
-#[get("/")]
-fn hello_world() -> Json<Value> {
-    let hello = Json(json!(
-        {
-            "init" : "hello world"
-        }
-    ));
-   hello
-}
+mod routes;
+mod dtos;
 
 #[rocket::main]
 async fn main() {
     rocket::build()
         .manage(config::connect())
-        .mount("/", routes![hello_world])
+        .mount("/auth", routes![register, login])
+        .mount("/", routes![get_users, get_user, delete_user, update_user, profile, update_profile])
         .launch().await.unwrap();
 }
 

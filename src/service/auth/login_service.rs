@@ -1,5 +1,5 @@
+use bcrypt::verify;
 use diesel::MysqlConnection;
-use bcrypt::{verify};
 
 use crate::{enums::AppError, internals::UserInternal, repository::UserRepository};
 
@@ -18,13 +18,13 @@ impl LoginService {
         password: &str,
         email: &str,
     ) -> Result<UserInternal, AppError> {
-        let user = self
-            .user_repo
-            .find_by_email(email, connection)
-            .map_err(|error| match error {
-                diesel::result::Error::NotFound => AppError::UserNotFound,
-                _ => AppError::DatabaseError,
-            })?;
+        let user =
+            self.user_repo
+                .find_by_email(email, connection)
+                .map_err(|error| match error {
+                    diesel::result::Error::NotFound => AppError::UserNotFound,
+                    _ => AppError::DatabaseError,
+                })?;
 
         let valid =
             verify(password, &user.password_hash).map_err(|_| AppError::AuthenticationError)?;
@@ -34,14 +34,13 @@ impl LoginService {
         }
 
         Ok(user).map(|user| UserInternal {
-                id: user.id,
-                email: user.email,
-                full_name: user.full_name,
-                user_name: user.user_name,
-                phone: user.phone,
-                created_at: user.created_at,
-                updated_at: user.updated_at,
-            })
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+            user_name: user.user_name,
+            phone: user.phone,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+        })
     }
-
 }

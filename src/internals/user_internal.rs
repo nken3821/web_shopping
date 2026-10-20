@@ -8,5 +8,5 @@ pub struct UserInternal {
     pub phone: String,
     // pub role: String
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime, 
+    pub updated_at: NaiveDateTime,
 }

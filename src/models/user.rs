@@ -1,6 +1,6 @@
+use crate::schema::users;
 use chrono::NaiveDateTime;
 use diesel::{Selectable, deserialize::Queryable, prelude::Insertable, query_builder::AsChangeset};
-use crate::schema::users;
 
 #[derive(Selectable, Queryable)]
 #[diesel(table_name = users)]
@@ -13,7 +13,7 @@ pub struct User {
     pub phone: String,
     // pub role: String
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime, 
+    pub updated_at: NaiveDateTime,
 }
 
 #[derive(Insertable)]

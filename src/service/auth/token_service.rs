@@ -1,12 +1,12 @@
-use jsonwebtoken::{encode, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
-use std::{env};
 use chrono::{Duration, Utc};
+use jsonwebtoken::{EncodingKey, Header, encode};
+use serde::{Deserialize, Serialize};
+use std::env;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: i32,
-    pub exp: usize
+    pub exp: usize,
 }
 
 pub struct TokenService;

@@ -10,7 +10,7 @@ pub enum AppError {
     PasswordHashError,
 }
 
-impl AppError  {
+impl AppError {
     pub fn status(&self) -> Status {
         match self {
             AppError::UserNotFound => Status::NotFound,

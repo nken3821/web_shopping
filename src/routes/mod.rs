@@ -2,11 +2,4 @@ pub mod auth_route;
 pub mod user_route;
 
 pub use auth_route::{login, register};
-pub use user_route::{
-    get_users, 
-    get_user, 
-    delete_user, 
-    update_user, 
-    profile, 
-    update_profile
-};
+pub use user_route::{delete_user, get_user, get_users, profile, update_profile, update_user};

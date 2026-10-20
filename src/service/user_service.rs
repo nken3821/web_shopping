@@ -97,6 +97,8 @@ impl BaseService for UserService {
             return Err(AppError::ValidationError);
         }
 
+        // can fix lai Th triet de vi .co van thong qua dc 
+
         if let Some(email) = args.email.as_ref() {
             if email.trim().is_empty() || !email.validate_email() {
                 return Err(AppError::ValidationError);
@@ -158,6 +160,8 @@ impl BaseService for UserService {
         {
             return Err(AppError::ValidationError);
         }
+
+        // can fix lai Th triet de vi .co van thong qua dc 
 
         if !args.email.validate_email() {
             return Err(AppError::ValidationError);

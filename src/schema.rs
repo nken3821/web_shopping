@@ -15,5 +15,7 @@ diesel::table! {
         phone -> Varchar,
         created_at -> Datetime,
         updated_at -> Datetime,
+        #[max_length = 50]
+        role -> Varchar,
     }
 }

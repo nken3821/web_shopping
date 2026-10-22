@@ -14,6 +14,7 @@ mod repository;
 mod routes;
 mod schema;
 mod service;
+mod guards;
 
 #[rocket::main]
 async fn main() {

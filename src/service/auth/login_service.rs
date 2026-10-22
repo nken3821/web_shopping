@@ -39,6 +39,7 @@ impl LoginService {
             full_name: user.full_name,
             user_name: user.user_name,
             phone: user.phone,
+            role: user.role,
             created_at: user.created_at,
             updated_at: user.updated_at,
         })

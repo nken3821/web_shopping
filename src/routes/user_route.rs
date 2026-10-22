@@ -1,24 +1,15 @@
 use crate::dtos::user_request::UpdateUserRequest;
+use crate::guards::auth_guard::{AdminUser, AuthenticatedUser};
 use crate::interface::BaseService;
-use crate::repository::UserRepository;
-use crate::service::token_service::Claims;
+use crate::routes::USER_REPO;
 use crate::service::user_service::UserUpdateArgs;
 use crate::{config::Connection, dtos::user_response::UserResponse, service::UserService};
-use rocket::Request;
 use rocket::http::Status;
-use rocket::request::{FromRequest, Outcome};
 use rocket::serde::json::Json;
 use rocket::{delete, get, put};
-use std::env;
-
-const USER_REPO: UserRepository = UserRepository;
-
-pub struct AuthenticatedUser {
-    pub user_id: i32,
-}
 
 #[get("/users")]
-pub fn get_users(connection: Connection) -> Result<Json<Vec<UserResponse>>, Status> {
+pub fn get_users(_user: AdminUser, connection: Connection) -> Result<Json<Vec<UserResponse>>, Status> {
     let mut connection = connection.0;
 
     let user_ser = UserService::new(USER_REPO);
@@ -45,7 +36,7 @@ pub fn get_users(connection: Connection) -> Result<Json<Vec<UserResponse>>, Stat
 }
 
 #[get("/users/<id>")]
-pub fn get_user(id: i32, connection: Connection) -> Result<Json<UserResponse>, Status> {
+pub fn get_user(id: i32, _user: AdminUser, connection: Connection) -> Result<Json<UserResponse>, Status> {
     let mut connection = connection.0;
 
     let user_ser = UserService::new(USER_REPO);
@@ -67,7 +58,7 @@ pub fn get_user(id: i32, connection: Connection) -> Result<Json<UserResponse>, S
 }
 
 #[delete("/users/<id>")]
-pub fn delete_user(id: i32, connection: Connection) -> Result<Status, Status> {
+pub fn delete_user(id: i32, _user: AdminUser, connection: Connection) -> Result<Status, Status> {
     let mut connection = connection.0;
 
     let user_ser = UserService::new(USER_REPO);
@@ -81,6 +72,7 @@ pub fn delete_user(id: i32, connection: Connection) -> Result<Status, Status> {
 #[put("/users/<id>", format = "json", data = "<data>")]
 pub fn update_user(
     id: i32,
+    _user: AdminUser,
     connection: Connection,
     data: Json<UpdateUserRequest>,
 ) -> Result<Json<UserResponse>, Status> {
@@ -172,41 +164,3 @@ pub fn update_profile(
         .map_err(|error| error.status())
 }
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for AuthenticatedUser {
-    type Error = ();
-
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let authorization = request.headers().get_one("Authorization");
-
-        let authorization = match authorization {
-            Some(value) => value,
-            None => return Outcome::Error((Status::Unauthorized, ())),
-        };
-
-        let token = match authorization.strip_prefix("Bearer ") {
-            Some(token) => token,
-            None => return Outcome::Error((Status::Unauthorized, ())),
-        };
-
-        let secret = match env::var("JWT_SECRET") {
-            Ok(secret) => secret,
-            Err(_) => return Outcome::Error((Status::InternalServerError, ())),
-        };
-
-        let validation = jsonwebtoken::Validation::default();
-
-        let token_data = match jsonwebtoken::decode::<Claims>(
-            token,
-            &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()),
-            &validation,
-        ) {
-            Ok(data) => data,
-            Err(_) => return Outcome::Error((Status::Unauthorized, ())),
-        };
-
-        Outcome::Success(AuthenticatedUser {
-            user_id: token_data.claims.sub,
-        })
-    }
-}

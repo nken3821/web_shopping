@@ -1,4 +1,4 @@
-use crate::schema::users;
+use crate::{enums::role::UserRole, schema::users};
 use chrono::NaiveDateTime;
 use diesel::{Selectable, deserialize::Queryable, prelude::Insertable, query_builder::AsChangeset};
 
@@ -11,7 +11,7 @@ pub struct User {
     pub full_name: String,
     pub user_name: String,
     pub phone: String,
-    // pub role: String
+    pub role: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }

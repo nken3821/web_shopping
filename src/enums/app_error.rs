@@ -8,6 +8,8 @@ pub enum AppError {
     AuthenticationError,
     DatabaseError,
     PasswordHashError,
+    Forbidden,
+    InvalidRole,
 }
 
 impl AppError {
@@ -19,6 +21,8 @@ impl AppError {
             AppError::AuthenticationError => Status::Unauthorized,
             AppError::DatabaseError => Status::InternalServerError,
             AppError::PasswordHashError => Status::InternalServerError,
+            AppError::Forbidden => Status::Forbidden,
+            AppError::InvalidRole => Status::BadRequest,
         }
     }
 }

@@ -1,13 +1,9 @@
 use crate::{
-    config::Connection,
-    dtos::{
+    config::Connection, dtos::{
         auth_request::{LoginRequest, RegisterRequest},
         auth_response::LoginResponse,
         user_response::UserResponse,
-    },
-    interface::BaseService,
-    repository::UserRepository,
-    service::{
+    }, enums::{role::UserRole}, interface::BaseService, routes::USER_REPO, service::{
         UserService, login_service::LoginService, token_service::TokenService,
         user_service::UserCreateArgs,
     },
@@ -15,7 +11,7 @@ use crate::{
 use rocket::serde::json::Json;
 use rocket::{http::Status, post};
 
-const USER_REPO: UserRepository = UserRepository;
+// const USER_REPO: UserRepository = UserRepository;
 
 #[post("/login", format = "json", data = "<data>")]
 pub fn login(
@@ -30,8 +26,9 @@ pub fn login(
         .login(&mut connection, &data.password, &data.email)
         .map_err(|error| error.status())
         .and_then(|user| {
+            let role = UserRole::try_from(user.role.as_str()).map_err(|_| Status::BadRequest)?;
             let token =
-                TokenService::generate_token(user.id).map_err(|_| Status::InternalServerError)?;
+                TokenService::generate_token(user.id, role).map_err(|_| Status::InternalServerError)?;
 
             Ok(Json(LoginResponse { token }))
         })

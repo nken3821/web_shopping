@@ -2,7 +2,7 @@ use crate::dtos::user_request::UpdateUserRequest;
 use crate::guards::auth_guard::{AdminUser, AuthenticatedUser};
 use crate::interface::BaseService;
 use crate::routes::USER_REPO;
-use crate::service::user_service::UserUpdateArgs;
+use crate::service::user_service::{UserDeleteArgs, UserUpdateArgs};
 use crate::{config::Connection, dtos::user_response::UserResponse, service::UserService};
 use rocket::http::Status;
 use rocket::serde::json::Json;
@@ -14,8 +14,9 @@ pub fn get_users(_user: AdminUser, connection: Connection) -> Result<Json<Vec<Us
 
     let user_ser = UserService::new(USER_REPO);
 
+    
     user_ser
-        .get_all(&mut connection)
+        .get_all(None, &mut connection)
         .map(|users| {
             Json(
                 users
@@ -63,8 +64,13 @@ pub fn delete_user(id: i32, _user: AdminUser, connection: Connection) -> Result<
 
     let user_ser = UserService::new(USER_REPO);
 
+    let args = UserDeleteArgs {
+        model_id: None,
+        list_id: None,
+    };
+
     user_ser
-        .delete(&mut connection, id)
+        .delete(&mut connection, id, args)
         .map(|_| Status::NoContent)
         .map_err(|error| error.status())
 }

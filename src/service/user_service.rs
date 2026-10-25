@@ -25,14 +25,20 @@ pub struct UserUpdateArgs {
     pub phone: Option<String>,
 }
 
+pub struct UserDeleteArgs {
+    pub model_id: Option<i32>,
+    pub list_id: Option<Vec<i32>>,
+}
+
 impl BaseService for UserService {
     type InsertModelInput = UserCreateArgs;
     type OutputModel = UserInternal;
     type OutputError = AppError;
     type IdType = i32;
     type UpdateModelInput = UserUpdateArgs;
+    type DeleteModelInput = UserDeleteArgs;
 
-    fn get_all(&self, connection: &mut MysqlConnection) -> Result<Vec<UserInternal>, AppError> {
+    fn get_all(&self, _model_id: Option<i32>, connection: &mut MysqlConnection) -> Result<Vec<UserInternal>, AppError> {
         self.user_repo
             .find_all(connection)
             .map(|users| {
@@ -76,7 +82,7 @@ impl BaseService for UserService {
         }
     }
 
-    fn delete(&self, connection: &mut MysqlConnection, model_id: i32) -> Result<(), AppError> {
+    fn delete(&self, connection: &mut MysqlConnection, model_id: i32, _args: UserDeleteArgs) -> Result<(), AppError> {
         let affected_rows = self
             .user_repo
             .delete(model_id, connection)
@@ -99,7 +105,7 @@ impl BaseService for UserService {
             return Err(AppError::ValidationError);
         }
 
-        // can fix lai Th triet de vi .co van thong qua dc 
+        // can fix lai Th triet de vi .co van thong qua dc
 
         if let Some(email) = args.email.as_ref() {
             if email.trim().is_empty() || !email.validate_email() {
@@ -109,6 +115,13 @@ impl BaseService for UserService {
 
         if let Some(phone) = args.phone.as_ref() {
             if phone.trim().is_empty() || phone.chars().any(char::is_whitespace) {
+                return Err(AppError::ValidationError);
+            }
+
+            if !phone.starts_with("0")
+                || phone.len() != 10
+                || !phone.chars().all(|c| c.is_ascii_digit())
+            {
                 return Err(AppError::ValidationError);
             }
         }
@@ -164,7 +177,7 @@ impl BaseService for UserService {
             return Err(AppError::ValidationError);
         }
 
-        // can fix lai Th triet de vi .co van thong qua dc 
+        // can fix lai Th triet de vi .co van thong qua dc
 
         if !args.email.validate_email() {
             return Err(AppError::ValidationError);
@@ -172,6 +185,13 @@ impl BaseService for UserService {
 
         if args.email.chars().any(char::is_whitespace)
             || args.phone.chars().any(char::is_whitespace)
+        {
+            return Err(AppError::ValidationError);
+        }
+
+        if !args.phone.starts_with("0")
+            || args.phone.len() != 10
+            || !args.phone.chars().all(|c| c.is_ascii_digit())
         {
             return Err(AppError::ValidationError);
         }

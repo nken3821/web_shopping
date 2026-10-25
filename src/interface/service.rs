@@ -6,9 +6,11 @@ pub trait BaseService {
     type OutputError;
     type IdType;
     type UpdateModelInput;
+    type DeleteModelInput;
 
     fn get_all(
         &self,
+        model_id: Option< Self::IdType>,
         connection: &mut MysqlConnection,
     ) -> Result<Vec<Self::OutputModel>, Self::OutputError>;
 
@@ -22,6 +24,7 @@ pub trait BaseService {
         &self,
         connection: &mut MysqlConnection,
         model_id: Self::IdType,
+        args: Self::DeleteModelInput,
     ) -> Result<(), Self::OutputError>;
 
     fn update(

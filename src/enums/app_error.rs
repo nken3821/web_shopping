@@ -10,6 +10,7 @@ pub enum AppError {
     PasswordHashError,
     Forbidden,
     InvalidRole,
+    NotFound,
 }
 
 impl AppError {
@@ -23,6 +24,7 @@ impl AppError {
             AppError::PasswordHashError => Status::InternalServerError,
             AppError::Forbidden => Status::Forbidden,
             AppError::InvalidRole => Status::BadRequest,
+            AppError::NotFound => Status::NotFound,
         }
     }
 }

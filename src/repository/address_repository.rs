@@ -1,18 +1,20 @@
-use diesel::{
-    MysqlConnection, QueryDsl, QueryResult, RunQueryDsl, SelectableHelper,
-};
+use diesel::{MysqlConnection, QueryDsl, QueryResult, RunQueryDsl, SelectableHelper};
 
-use crate::{interface::BaseRepository, models::{Address, NewAddress, UpdateAdress, address::UserWithAddresses}, routes::USER_REPO, schema::addresses};
+use crate::{
+    interface::BaseRepository,
+    models::{Address, NewAddress, UpdateAdress, address::UserWithAddresses},
+    routes::USER_REPO,
+    schema::addresses,
+};
 use diesel::prelude::*;
 pub struct AddressRepository;
 
 impl BaseRepository for AddressRepository {
-
     type IdType = i32;
     type InsertModel = NewAddress;
     type OutputModel = Address;
     type UpdateModel = UpdateAdress;
-    
+
     fn find_by_id(&self, model_id: i32, connection: &mut MysqlConnection) -> QueryResult<Address> {
         addresses::table
             .find(model_id)
@@ -53,9 +55,12 @@ impl BaseRepository for AddressRepository {
     }
 }
 
-
 impl AddressRepository {
-    pub fn find_all(&self, user_id: i32, connection: &mut MysqlConnection) -> QueryResult<UserWithAddresses> {
+    pub fn find_all(
+        &self,
+        user_id: i32,
+        connection: &mut MysqlConnection,
+    ) -> QueryResult<UserWithAddresses> {
         let user = USER_REPO.find_by_id(user_id, connection)?;
 
         let user_adresses = Address::belonging_to(&user).load::<Address>(connection)?;
@@ -64,15 +69,11 @@ impl AddressRepository {
             user,
             addresses: user_adresses,
         })
-
     }
 
-    pub fn set_false(&self, user_id: i32, connection: &mut MysqlConnection) -> QueryResult<usize>{
+    pub fn set_false(&self, user_id: i32, connection: &mut MysqlConnection) -> QueryResult<usize> {
         diesel::update(addresses::table.filter(addresses::user_id.eq(user_id)))
             .set(addresses::is_default.eq(false))
             .execute(connection)
-        
     }
 }
-
-    

@@ -2,7 +2,7 @@ use diesel::MysqlConnection;
 
 use crate::{
     enums::AppError,
-    interface::{BaseRepository, BaseService},
+    interface::{Args, BaseRepository, BaseService},
     internals::AddressInternal,
     models::{NewAddress, UpdateAdress},
     repository::AddressRepository,
@@ -20,7 +20,6 @@ pub struct AddressCreateArgs {
     pub district: Option<String>,
     pub ward: String,
     pub street: String,
-    pub is_default: bool,
 }
 
 pub struct AddressUpdateArgs {
@@ -33,25 +32,25 @@ pub struct AddressUpdateArgs {
     pub is_default: Option<bool>,
 }
 
-pub struct AddressDeleteArgs {
-    pub model_id: Option<i32>,
-    pub list_id: Option<Vec<i32>>,
-}
-
 impl BaseService for AddressService {
     type InsertModelInput = AddressCreateArgs;
+    type UpdateModelInput = AddressUpdateArgs;
+    type AgrsInput = Args;
     type OutputModel = AddressInternal;
     type OutputError = AppError;
-    type IdType = i32;
-    type UpdateModelInput = AddressUpdateArgs;
-    type DeleteModelInput = AddressDeleteArgs;
 
-    fn get_all(&self, model_id: Option<i32>, connection: &mut MysqlConnection) -> Result<Vec<AddressInternal>, AppError> {
-        let user_id = model_id.ok_or(AppError::InvalidRole)?;
+    fn get_all(
+        &self,
+        args: Args,
+        connection: &mut MysqlConnection,
+    ) -> Result<Vec<AddressInternal>, AppError> {
+        let actor_id = self.actor_work(args.actor_id)?;
+        let user_id = args.middle_id.ok_or(AppError::ValidationError)?;
         self.address_repo
             .find_all(user_id, connection)
             .map(|result| {
-                result.addresses
+                result
+                    .addresses
                     .into_iter()
                     .map(|address| AddressInternal {
                         id: address.id,
@@ -72,22 +71,31 @@ impl BaseService for AddressService {
 
     fn get_by_id(
         &self,
+        args: Args,
         connection: &mut MysqlConnection,
-        model_id: i32,
     ) -> Result<AddressInternal, AppError> {
+        let actor_id = self.actor_work(args.actor_id);
+        let user_id = args.middle_id.ok_or(AppError::ValidationError)?;
+        let model_id = args.target_id.ok_or(AppError::ValidationError)?;
         match self.address_repo.find_by_id(model_id, connection) {
-            Ok(address) => Ok(address).map(|address| AddressInternal {
-                id: address.id,
-                receiver_name: address.receiver_name,
-                phone: address.phone,
-                province: address.province,
-                district: address.district,
-                ward: address.ward,
-                street: address.street,
-                is_default: address.is_default,
-                created_at: address.created_at,
-                updated_at: address.updated_at,
-            }),
+            Ok(address) => {
+                if address.user_id == user_id {
+                    Ok(address).map(|address| AddressInternal {
+                        id: address.id,
+                        receiver_name: address.receiver_name,
+                        phone: address.phone,
+                        province: address.province,
+                        district: address.district,
+                        ward: address.ward,
+                        street: address.street,
+                        is_default: address.is_default,
+                        created_at: address.created_at,
+                        updated_at: address.updated_at,
+                    })
+                } else {
+                    return Err(AppError::DatabaseError);
+                }
+            }
 
             Err(diesel::result::Error::NotFound) => Err(AppError::UserNotFound),
 
@@ -95,15 +103,12 @@ impl BaseService for AddressService {
         }
     }
 
-    fn delete(
-        &self,
-        connection: &mut MysqlConnection,
-        model_id: i32,
-        args: AddressDeleteArgs,
-    ) -> Result<(), AppError> {
+    fn delete(&self, args: Args, connection: &mut MysqlConnection) -> Result<(), AppError> {
+        let actor_id = self.actor_work(args.actor_id);
+        let user_id = args.middle_id.ok_or(AppError::ValidationError)?;
         let result = self
             .address_repo
-            .find_all(model_id, connection)
+            .find_all(user_id, connection)
             .map_err(|err| match err {
                 diesel::result::Error::NotFound => AppError::NotFound,
                 _ => AppError::DatabaseError,
@@ -114,13 +119,19 @@ impl BaseService for AddressService {
         } else if result.addresses.len() == 1 {
             return Err(AppError::ValidationError);
         } else {
-            if let Some(address_id) = args.model_id {
-                let result_address = self.address_repo.find_by_id(address_id, connection).map_err(|err| match err {
-                    diesel::result::Error::NotFound => AppError::NotFound,
-                    _ => AppError::DatabaseError,
-                })?;
+            if let Some(address_id) = args.target_id {
+                let result_address = self
+                    .address_repo
+                    .find_by_id(address_id, connection)
+                    .map_err(|err| match err {
+                        diesel::result::Error::NotFound => AppError::NotFound,
+                        _ => AppError::DatabaseError,
+                    })?;
+                if result_address.user_id != user_id {
+                    return Err(AppError::ValidationError);
+                }
                 if result_address.is_default == true {
-                    return Err(AppError::ValidationError)
+                    return Err(AppError::ValidationError);
                 } else {
                     let affected_rows = self
                         .address_repo
@@ -134,35 +145,38 @@ impl BaseService for AddressService {
                     Ok(())
                 }
             } else {
-                return Err(AppError::DatabaseError);
+                return Err(AppError::ValidationError);
             }
         }
     }
 
     fn update(
         &self,
+        model_input: AddressUpdateArgs,
+        args: Args,
         connection: &mut MysqlConnection,
-        model_id: i32,
-        args: AddressUpdateArgs,
     ) -> Result<AddressInternal, AppError> {
-        if args.receiver_name.is_none()
-            && args.phone.is_none()
-            && args.province.is_none()
-            && args.district.is_none()
-            && args.ward.is_none()
-            && args.street.is_none()
-            && args.is_default.is_none()
+        let actor_id = self.actor_work(args.actor_id);
+        let user_id = args.middle_id.ok_or(AppError::ValidationError)?;
+        let model_id = args.target_id.ok_or(AppError::ValidationError)?;
+        if model_input.receiver_name.is_none()
+            && model_input.phone.is_none()
+            && model_input.province.is_none()
+            && model_input.district.is_none()
+            && model_input.ward.is_none()
+            && model_input.street.is_none()
+            && model_input.is_default.is_none()
         {
             return Err(AppError::ValidationError);
         }
 
-        if let Some(receiver_name) = args.receiver_name.as_ref() {
+        if let Some(receiver_name) = model_input.receiver_name.as_ref() {
             if receiver_name.trim().is_empty() {
                 return Err(AppError::ValidationError);
             }
         }
 
-        if let Some(phone) = args.phone.as_ref() {
+        if let Some(phone) = model_input.phone.as_ref() {
             if phone.trim().is_empty()
                 || phone.chars().any(char::is_whitespace)
                 || phone.len() != 10
@@ -173,87 +187,100 @@ impl BaseService for AddressService {
             }
         }
 
-        if let Some(province) = args.province.as_ref() {
+        if let Some(province) = model_input.province.as_ref() {
             if province.trim().is_empty() {
                 return Err(AppError::ValidationError);
             }
         }
 
-        if let Some(district) = args.district.as_ref() {
+        if let Some(district) = model_input.district.as_ref() {
             if district.trim().is_empty() {
                 return Err(AppError::ValidationError);
             }
         }
 
-        if let Some(ward) = args.ward.as_ref() {
+        if let Some(ward) = model_input.ward.as_ref() {
             if ward.trim().is_empty() {
                 return Err(AppError::ValidationError);
             }
         }
 
-        if let Some(street) = args.street.as_ref() {
+        if let Some(street) = model_input.street.as_ref() {
             if street.trim().is_empty() {
                 return Err(AppError::ValidationError);
             }
         }
 
-        self.address_repo
+        let address = self
+            .address_repo
             .find_by_id(model_id, connection)
             .map_err(|error| match error {
                 diesel::result::Error::NotFound => AppError::UserNotFound,
                 _ => AppError::DatabaseError,
             })?;
 
-        let model = UpdateAdress {
-            receiver_name: args.receiver_name,
-            phone: args.phone,
-            province: args.province,
-            district: args.district,
-            ward: args.ward,
-            street: args.street,
-            is_default: args.is_default,
-        };
+        if address.user_id == user_id {
+            if (model_input.is_default) == Some(true) {
+                self.address_repo
+                    .set_false(address.user_id, connection)
+                    .map_err(|_| AppError::DatabaseError)?;
+            }
 
-        self.address_repo
-            .update(model_id, model, connection)
-            .map_err(|_| AppError::DatabaseError)?;
+            let model = UpdateAdress {
+                receiver_name: model_input.receiver_name,
+                phone: model_input.phone,
+                province: model_input.province,
+                district: model_input.district,
+                ward: model_input.ward,
+                street: model_input.street,
+                is_default: model_input.is_default,
+            };
 
-        self.address_repo
-            .find_by_id(model_id, connection)
-            .map(|address| AddressInternal {
-                id: address.id,
-                receiver_name: address.receiver_name,
-                phone: address.phone,
-                province: address.province,
-                district: address.district,
-                ward: address.ward,
-                street: address.street,
-                is_default: address.is_default,
-                created_at: address.created_at,
-                updated_at: address.updated_at,
-            })
-            .map_err(|_| AppError::DatabaseError)
+            self.address_repo
+                .update(model_id, model, connection)
+                .map_err(|_| AppError::DatabaseError)?;
+
+            self.address_repo
+                .find_by_id(model_id, connection)
+                .map(|address| AddressInternal {
+                    id: address.id,
+                    receiver_name: address.receiver_name,
+                    phone: address.phone,
+                    province: address.province,
+                    district: address.district,
+                    ward: address.ward,
+                    street: address.street,
+                    is_default: address.is_default,
+                    created_at: address.created_at,
+                    updated_at: address.updated_at,
+                })
+                .map_err(|_| AppError::DatabaseError)
+        } else {
+            return Err(AppError::ValidationError);
+        }
     }
 
     fn create(
         &self,
+        model_input: AddressCreateArgs,
+        args: Args,
         connection: &mut MysqlConnection,
-        args: AddressCreateArgs,
     ) -> Result<AddressInternal, AppError> {
-        if args.receiver_name.trim().is_empty()
-            || args.phone.trim().is_empty()
-            || args.province.trim().is_empty()
-            || args.ward.trim().is_empty()
-            || args.street.trim().is_empty()
+        let actor_id = self.actor_work(args.actor_id);
+        if model_input.receiver_name.trim().is_empty()
+            || model_input.phone.trim().is_empty()
+            || model_input.province.trim().is_empty()
+            || model_input.ward.trim().is_empty()
+            || model_input.street.trim().is_empty()
         {
             return Err(AppError::ValidationError);
         }
 
-        if args.phone.chars().any(char::is_whitespace) {
+        if model_input.phone.chars().any(char::is_whitespace) {
             return Err(AppError::ValidationError);
         }
 
-        let phone = args.phone.trim();
+        let phone = model_input.phone.trim();
 
         if !phone.starts_with("0")
             || phone.len() != 10
@@ -263,17 +290,17 @@ impl BaseService for AddressService {
         }
 
         self.address_repo
-            .set_false(args.user_id, connection)
+            .set_false(model_input.user_id, connection)
             .map_err(|_| AppError::DatabaseError)?;
 
         let model = NewAddress {
-            user_id: args.user_id,
-            receiver_name: args.receiver_name,
-            phone: args.phone,
-            province: args.province,
-            district: args.district,
-            ward: args.ward,
-            street: args.street,
+            user_id: model_input.user_id,
+            receiver_name: model_input.receiver_name,
+            phone: model_input.phone,
+            province: model_input.province,
+            district: model_input.district,
+            ward: model_input.ward,
+            street: model_input.street,
             is_default: true,
         };
 
@@ -303,11 +330,3 @@ impl AddressService {
         Self { address_repo }
     }
 }
-
-
-// Thiết kế lại service de co the dung chung o hai loai user:  Admin va User
-// thong nhat thu tu tham so truyen vao 
-// sua lai repo neu trong qua trình chuyen dôi co phat sinh loi
-// fix lại validator cua emaul o user_service 
-// thiet ke lai api, thong nhat chung 1 kieu 
-//

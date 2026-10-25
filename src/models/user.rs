@@ -1,8 +1,12 @@
-use crate::{schema::users};
+use crate::schema::users;
 use chrono::NaiveDateTime;
-use diesel::{Selectable, associations::Identifiable, deserialize::Queryable, prelude::Insertable, query_builder::AsChangeset};
+use diesel::{
+    Selectable, associations::Identifiable, deserialize::Queryable, prelude::Insertable,
+    query_builder::AsChangeset,
+};
 use serde::Serialize;
 
+#[derive(Selectable, Queryable, Identifiable, Serialize)]
 #[derive(Selectable, Queryable, Identifiable, Serialize)]
 #[diesel(table_name = users)]
 pub struct User {

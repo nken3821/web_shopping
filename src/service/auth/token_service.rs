@@ -15,7 +15,10 @@ pub struct Claims {
 pub struct TokenService;
 
 impl TokenService {
-    pub fn generate_token(user_id: i32, role: UserRole) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn generate_token(
+        user_id: i32,
+        role: UserRole,
+    ) -> Result<String, jsonwebtoken::errors::Error> {
         let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
         let expiration = Utc::now()
@@ -36,12 +39,16 @@ impl TokenService {
         )
     }
 
-    pub fn verify_token(token: &str, secret: String) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error>{
+    pub fn verify_token(
+        token: &str,
+        secret: String,
+    ) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
         let secret = secret;
 
         decode::<Claims>(
             token,
             &DecodingKey::from_secret(secret.as_bytes()),
-            &Validation::default(),)
+            &Validation::default(),
+        )
     }
 }

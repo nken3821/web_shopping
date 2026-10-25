@@ -33,6 +33,8 @@ impl LoginService {
             return Err(AppError::AuthenticationError);
         }
 
+        let actor_id = user.id;
+
         Ok(user).map(|user| UserInternal {
             id: user.id,
             email: user.email,

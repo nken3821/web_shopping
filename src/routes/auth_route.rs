@@ -1,9 +1,14 @@
 use crate::{
-    config::Connection, dtos::{
+    config::Connection,
+    dtos::{
         auth_request::{LoginRequest, RegisterRequest},
         auth_response::LoginResponse,
         user_response::UserResponse,
-    }, enums::{role::UserRole}, interface::BaseService, routes::USER_REPO, service::{
+    },
+    enums::role::UserRole,
+    interface::{Args, BaseService},
+    routes::USER_REPO,
+    service::{
         UserService, login_service::LoginService, token_service::TokenService,
         user_service::UserCreateArgs,
     },
@@ -27,8 +32,8 @@ pub fn login(
         .map_err(|error| error.status())
         .and_then(|user| {
             let role = UserRole::try_from(user.role.as_str()).map_err(|_| Status::BadRequest)?;
-            let token =
-                TokenService::generate_token(user.id, role).map_err(|_| Status::InternalServerError)?;
+            let token = TokenService::generate_token(user.id, role)
+                .map_err(|_| Status::InternalServerError)?;
 
             Ok(Json(LoginResponse { token }))
         })
@@ -45,15 +50,17 @@ pub fn register(
 
     let data = data.into_inner();
 
-    let args = UserCreateArgs {
+    let insert_model = UserCreateArgs {
         email: data.email,
         password: data.password,
         phone: data.phone,
         fullname: data.fullname,
     };
 
+    let args = Args::default();
+
     user_ser
-        .create(&mut connection, args)
+        .create(insert_model, args, &mut connection)
         .map(|user| {
             Json(UserResponse {
                 id: user.id,

@@ -3,6 +3,7 @@ use diesel::MysqlConnection;
 use validator::ValidateEmail;
 
 use crate::enums::AppError;
+use crate::interface::Args;
 use crate::interface::{BaseRepository, BaseService};
 use crate::internals::UserInternal;
 use crate::models::{NewUser, UpdateUser};
@@ -27,12 +28,17 @@ pub struct UserUpdateArgs {
 
 impl BaseService for UserService {
     type InsertModelInput = UserCreateArgs;
+    type UpdateModelInput = UserUpdateArgs;
+    type AgrsInput = Args;
     type OutputModel = UserInternal;
     type OutputError = AppError;
-    type IdType = i32;
-    type UpdateModelInput = UserUpdateArgs;
 
-    fn get_all(&self, connection: &mut MysqlConnection) -> Result<Vec<UserInternal>, AppError> {
+    fn get_all(
+        &self,
+        args: Args,
+        connection: &mut MysqlConnection,
+    ) -> Result<Vec<UserInternal>, AppError> {
+        let actor_id = self.actor_work(args.actor_id);
         self.user_repo
             .find_all(connection)
             .map(|users| {
@@ -55,9 +61,11 @@ impl BaseService for UserService {
 
     fn get_by_id(
         &self,
+        args: Args,
         connection: &mut MysqlConnection,
-        model_id: i32,
     ) -> Result<UserInternal, AppError> {
+        let actor_id = self.actor_work(args.actor_id);
+        let model_id = args.target_id.ok_or(AppError::ValidationError)?;
         match self.user_repo.find_by_id(model_id, connection) {
             Ok(user) => Ok(user).map(|user| UserInternal {
                 id: user.id,
@@ -76,7 +84,9 @@ impl BaseService for UserService {
         }
     }
 
-    fn delete(&self, connection: &mut MysqlConnection, model_id: i32) -> Result<(), AppError> {
+    fn delete(&self, args: Args, connection: &mut MysqlConnection) -> Result<(), AppError> {
+        let actor_id = self.actor_work(args.actor_id);
+        let model_id = args.target_id.ok_or(AppError::ValidationError)?;
         let affected_rows = self
             .user_repo
             .delete(model_id, connection)
@@ -91,33 +101,53 @@ impl BaseService for UserService {
 
     fn update(
         &self,
+        model_input: UserUpdateArgs,
+        args: Args,
         connection: &mut MysqlConnection,
-        model_id: i32,
-        args: UserUpdateArgs,
     ) -> Result<UserInternal, AppError> {
-        if args.email.is_none() && args.fullname.is_none() && args.phone.is_none() {
+        let actor_id = self.actor_work(args.actor_id);
+        if model_input.email.is_none()
+            && model_input.fullname.is_none()
+            && model_input.phone.is_none()
+        {
             return Err(AppError::ValidationError);
         }
 
-        // can fix lai Th triet de vi .co van thong qua dc 
+        // can fix lai Th triet de vi .co van thong qua dc
 
-        if let Some(email) = args.email.as_ref() {
+        if let Some(email) = model_input.email.as_ref() {
             if email.trim().is_empty() || !email.validate_email() {
                 return Err(AppError::ValidationError);
             }
         }
 
-        if let Some(phone) = args.phone.as_ref() {
+        if let Some(phone) = model_input.phone.as_ref() {
             if phone.trim().is_empty() || phone.chars().any(char::is_whitespace) {
+                return Err(AppError::ValidationError);
+            }
+
+            if !phone.starts_with("0")
+                || phone.len() != 10
+                || !phone.chars().all(|c| c.is_ascii_digit())
+            {
+                return Err(AppError::ValidationError);
+            }
+
+            if !phone.starts_with("0")
+                || phone.len() != 10
+                || !phone.chars().all(|c| c.is_ascii_digit())
+            {
                 return Err(AppError::ValidationError);
             }
         }
 
-        if let Some(fullname) = args.fullname.as_ref() {
+        if let Some(fullname) = model_input.fullname.as_ref() {
             if fullname.trim().is_empty() {
                 return Err(AppError::ValidationError);
             }
         }
+
+        let model_id = args.target_id.ok_or(AppError::ValidationError)?;
 
         self.user_repo
             .find_by_id(model_id, connection)
@@ -127,9 +157,9 @@ impl BaseService for UserService {
             })?;
 
         let model = UpdateUser {
-            full_name: args.fullname,
-            phone: args.phone,
-            email: args.email,
+            full_name: model_input.fullname,
+            phone: model_input.phone,
+            email: model_input.email,
         };
 
         self.user_repo
@@ -153,50 +183,59 @@ impl BaseService for UserService {
 
     fn create(
         &self,
+        model_input: UserCreateArgs,
+        args: Args,
         connection: &mut MysqlConnection,
-        args: UserCreateArgs,
     ) -> Result<UserInternal, AppError> {
-        if args.email.trim().is_empty()
-            || args.phone.trim().is_empty()
-            || args.password.trim().is_empty()
-            || args.fullname.trim().is_empty()
+        let actor_id = self.actor_work(args.actor_id);
+        if model_input.email.trim().is_empty()
+            || model_input.phone.trim().is_empty()
+            || model_input.password.trim().is_empty()
+            || model_input.fullname.trim().is_empty()
         {
             return Err(AppError::ValidationError);
         }
 
-        // can fix lai Th triet de vi .co van thong qua dc 
+        // can fix lai Th triet de vi .co van thong qua dc
 
-        if !args.email.validate_email() {
+        if !model_input.email.validate_email() {
             return Err(AppError::ValidationError);
         }
 
-        if args.email.chars().any(char::is_whitespace)
-            || args.phone.chars().any(char::is_whitespace)
+        if model_input.email.chars().any(char::is_whitespace)
+            || model_input.phone.chars().any(char::is_whitespace)
         {
             return Err(AppError::ValidationError);
         }
 
-        if args.password.len() < 6 {
+        if !model_input.phone.starts_with("0")
+            || model_input.phone.len() != 10
+            || !model_input.phone.chars().all(|c| c.is_ascii_digit())
+        {
             return Err(AppError::ValidationError);
         }
 
-        match self.user_repo.find_by_email(&args.email, connection) {
+        if model_input.password.len() < 6 {
+            return Err(AppError::ValidationError);
+        }
+
+        match self.user_repo.find_by_email(&model_input.email, connection) {
             Ok(_) => return Err(AppError::UserAlreadyExists),
             Err(diesel::result::Error::NotFound) => {}
             Err(_) => return Err(AppError::DatabaseError),
         }
 
-        let username = self.get_email_prefix(&args.email);
+        let username = self.get_email_prefix(&model_input.email);
 
         let password_hash =
-            hash(args.password, DEFAULT_COST).map_err(|_| AppError::PasswordHashError)?;
+            hash(model_input.password, DEFAULT_COST).map_err(|_| AppError::PasswordHashError)?;
 
         let model = NewUser {
             user_name: username,
-            email: args.email,
+            email: model_input.email,
             password_hash,
-            phone: args.phone,
-            full_name: args.fullname,
+            phone: model_input.phone,
+            full_name: model_input.fullname,
         };
 
         self.user_repo

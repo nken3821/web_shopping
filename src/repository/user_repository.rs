@@ -40,10 +40,6 @@ impl BaseRepository for UserRepository {
         }
     }
 
-    fn find_all(&self, connection: &mut MysqlConnection) -> QueryResult<Vec<User>> {
-        users::table.select(User::as_select()).load(connection)
-    }
-
     fn update(
         &self,
         model_id: i32,
@@ -70,5 +66,9 @@ impl UserRepository {
             .filter(users::email.eq(email))
             .select(User::as_select())
             .first(connection)
+    }
+
+    pub fn find_all(&self, connection: &mut MysqlConnection) -> QueryResult<Vec<User>> {
+        users::table.select(User::as_select()).load(connection)
     }
 }

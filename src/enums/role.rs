@@ -5,14 +5,14 @@ pub enum UserRole {
     User,
     Admin,
     Guest,
-}  
+}
 
 impl UserRole {
-    pub fn as_str(&self) -> &'static str{
+    pub fn as_str(&self) -> &'static str {
         match self {
             UserRole::Admin => "admin",
             UserRole::User => "user",
-            UserRole::Guest => "guest"
+            UserRole::Guest => "guest",
         }
     }
 }

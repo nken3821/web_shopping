@@ -26,7 +26,7 @@ pub trait BaseRepository {
         Ok(result.id)
     }
 
-    fn find_all(&self, connection: &mut MysqlConnection) -> QueryResult<Vec<Self::OutputModel>>;
+    // fn find_all(&self, connection: &mut MysqlConnection) -> QueryResult<Vec<Self::OutputModel>>;
 
     fn create(
         &self,

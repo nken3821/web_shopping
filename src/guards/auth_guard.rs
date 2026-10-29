@@ -1,13 +1,13 @@
 use crate::config::Connection;
 use crate::interface::BaseRepository;
-use crate::service::token_service::{TokenService};
+use crate::service::token_service::TokenService;
 use rocket::Request;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use std::env;
 
-use crate::routes::USER_REPO;
 use crate::enums::role::UserRole;
+use crate::routes::USER_REPO;
 
 pub struct AuthenticatedUser {
     pub user_id: i32,
@@ -36,7 +36,7 @@ impl<'r> FromRequest<'r> for AuthenticatedUser {
             Err(_) => return Outcome::Error((Status::InternalServerError, ())),
         };
 
-       let data = match TokenService::verify_token(token, secret) {
+        let data = match TokenService::verify_token(token, secret) {
             Ok(data) => data,
             Err(_) => {
                 return Outcome::Error((Status::Unauthorized, ()));
@@ -81,7 +81,9 @@ impl<'r> FromRequest<'r> for AdminUser {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match AuthenticatedUser::from_request(req).await {
-            Outcome::Success(user) if user.role == UserRole::Admin => Outcome::Success(AdminUser(user)),
+            Outcome::Success(user) if user.role == UserRole::Admin => {
+                Outcome::Success(AdminUser(user))
+            }
             Outcome::Success(_) => Outcome::Error((Status::Forbidden, ())),
             Outcome::Error(error) => Outcome::Error(error),
             Outcome::Forward(status) => Outcome::Forward(status),

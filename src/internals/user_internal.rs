@@ -1,7 +1,5 @@
 use chrono::NaiveDateTime;
 
-use crate::enums::role::UserRole;
-
 pub struct UserInternal {
     pub id: i32,
     pub email: String,

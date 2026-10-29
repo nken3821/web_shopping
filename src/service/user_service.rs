@@ -26,11 +26,6 @@ pub struct UserUpdateArgs {
     pub phone: Option<String>,
 }
 
-pub struct UserDeleteArgs {
-    pub model_id: Option<i32>,
-    pub list_id: Option<Vec<i32>>,
-}
-
 impl BaseService for UserService {
     type InsertModelInput = UserCreateArgs;
     type UpdateModelInput = UserUpdateArgs;
@@ -119,7 +114,6 @@ impl BaseService for UserService {
         }
 
         // can fix lai Th triet de vi .co van thong qua dc
-        // can fix lai Th triet de vi .co van thong qua dc
 
         if let Some(email) = model_input.email.as_ref() {
             if email.trim().is_empty() || !email.validate_email() {
@@ -202,7 +196,6 @@ impl BaseService for UserService {
             return Err(AppError::ValidationError);
         }
 
-        // can fix lai Th triet de vi .co van thong qua dc
         // can fix lai Th triet de vi .co van thong qua dc
 
         if !model_input.email.validate_email() {

@@ -7,7 +7,6 @@ use diesel::{
 use serde::Serialize;
 
 #[derive(Selectable, Queryable, Identifiable, Serialize)]
-#[derive(Selectable, Queryable, Identifiable, Serialize)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i32,

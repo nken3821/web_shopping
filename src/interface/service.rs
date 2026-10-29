@@ -16,18 +16,10 @@ pub trait BaseService {
     type AgrsInput;
     type OutputModel;
     type OutputError;
-<<<<<<< HEAD
-    type IdType;
-    type UpdateModelInput;
-
-    fn get_all(
-        &self,
-=======
 
     fn get_all(
         &self,
         args: Self::AgrsInput,
->>>>>>> f6791a0 (feat: add address management functionality with CRUD operations)
         connection: &mut MysqlConnection,
     ) -> Result<Vec<Self::OutputModel>, Self::OutputError>;
 
@@ -41,9 +33,6 @@ pub trait BaseService {
         &self,
         args: Self::AgrsInput,
         connection: &mut MysqlConnection,
-<<<<<<< HEAD
-=======
->>>>>>> f6791a0 (feat: add address management functionality with CRUD operations)
     ) -> Result<(), Self::OutputError>;
 
     fn update(

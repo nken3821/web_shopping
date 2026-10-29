@@ -128,11 +128,6 @@ pub fn delete_user(id: i32, user: AdminUser, connection: Connection) -> Result<S
 
     let user_ser = UserService::new(USER_REPO);
 
-    let args = UserDeleteArgs {
-        model_id: None,
-        list_id: None,
-    };
-
     user_ser
         .delete(args, &mut connection)
         .map(|_| Status::NoContent)

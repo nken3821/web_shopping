@@ -1,6 +1,28 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    activity_logs (id) {
+        id -> Integer,
+        actor_id -> Nullable<Integer>,
+        #[max_length = 20]
+        actor_role -> Nullable<Varchar>,
+        #[max_length = 100]
+        action -> Varchar,
+        #[max_length = 50]
+        target_type -> Nullable<Varchar>,
+        #[max_length = 100]
+        target_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        description -> Nullable<Varchar>,
+        #[max_length = 20]
+        status -> Varchar,
+        #[max_length = 45]
+        ip_address -> Nullable<Varchar>,
+        created_at -> Datetime,
+    }
+}
+
+diesel::table! {
     addresses (id) {
         id -> Integer,
         user_id -> Integer,
@@ -44,4 +66,4 @@ diesel::table! {
 
 diesel::joinable!(addresses -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(addresses, users,);
+diesel::allow_tables_to_appear_in_same_query!(activity_logs, addresses, users,);

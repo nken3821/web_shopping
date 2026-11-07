@@ -4,7 +4,7 @@ use crate::{
     interface::BaseRepository,
     models::{Address, NewAddress, UpdateAdress, address::UserWithAddresses},
     routes::USER_REPO,
-    schema::addresses,
+    schema::addresses::{self, id},
 };
 use diesel::prelude::*;
 pub struct AddressRepository;
@@ -52,6 +52,14 @@ impl BaseRepository for AddressRepository {
 
     fn delete(&self, model_id: i32, connection: &mut MysqlConnection) -> QueryResult<usize> {
         diesel::delete(addresses::table.find(model_id)).execute(connection)
+    }
+
+    fn delete_more(
+        &self,
+        list_model_id: Vec<i32>,
+        connection: &mut MysqlConnection,
+    ) -> QueryResult<usize> {
+        diesel::delete(addresses::table.filter(id.eq_any(list_model_id))).execute(connection)
     }
 }
 

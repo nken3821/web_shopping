@@ -17,6 +17,12 @@ pub trait BaseService {
     type OutputModel;
     type OutputError;
 
+    fn delete_more_model(
+        &self,
+        args: Args,
+        connection: &mut MysqlConnection,
+    ) -> Result<(), Self::OutputError>;
+
     fn get_all(
         &self,
         args: Self::AgrsInput,

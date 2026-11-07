@@ -1,4 +1,6 @@
-use crate::dtos::address_request::{CreateAddressRequest, UpdateAddressRequest};
+use crate::dtos::address_request::{
+    CreateAddressRequest, DeleteAddressesRequest, UpdateAddressRequest,
+};
 use crate::dtos::address_response::AddressResponse;
 use crate::guards::auth_guard::{AdminUser, AuthenticatedUser};
 use crate::interface::{Args, BaseService};
@@ -208,6 +210,30 @@ pub fn update_address(
         .map_err(|error| error.status())
 }
 
+#[delete("/<id>/addresses", format = "json", data = "<data>")]
+pub fn delete_more_address_by_admin_user(
+    id: i32,
+    user: AdminUser,
+    connection: Connection,
+    data: Json<DeleteAddressesRequest>,
+) -> Result<Status, Status> {
+    let mut connection = connection.0;
+
+    let args = Args {
+        actor_id: Some(user.0.user_id),
+        middle_id: Some(id),
+        targets_id: Some(data.into_inner().targets_id),
+        ..Default::default()
+    };
+
+    let address_ser = AddressService::new(ADDRESS_REPO);
+
+    address_ser
+        .delete_more_model(args, &mut connection)
+        .map(|_| Status::NoContent)
+        .map_err(|error| error.status())
+}
+
 #[get("/addresses")]
 pub fn get_addresses_by_user(
     user: AuthenticatedUser,
@@ -362,5 +388,28 @@ pub fn create_address_by_user(
                 updated_at: address.updated_at.to_string(),
             })
         })
+        .map_err(|error| error.status())
+}
+
+#[delete("/addresses", format = "json", data = "<data>")]
+pub fn delete_more_address_by_user(
+    user: AuthenticatedUser,
+    connection: Connection,
+    data: Json<DeleteAddressesRequest>,
+) -> Result<Status, Status> {
+    let mut connection = connection.0;
+
+    let args = Args {
+        actor_id: Some(user.user_id),
+        middle_id: Some(user.user_id),
+        targets_id: Some(data.into_inner().targets_id),
+        ..Default::default()
+    };
+
+    let address_ser = AddressService::new(ADDRESS_REPO);
+
+    address_ser
+        .delete_more_model(args, &mut connection)
+        .map(|_| Status::NoContent)
         .map_err(|error| error.status())
 }

@@ -14,3 +14,8 @@ pub struct CreateUserRequest {
     pub email: String,
     pub phone: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteUsersRequest {
+    pub targets_id: Vec<i32>,
+}

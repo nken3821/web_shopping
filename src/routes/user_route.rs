@@ -1,4 +1,4 @@
-use crate::dtos::user_request::{CreateUserRequest, UpdateUserRequest};
+use crate::dtos::user_request::{CreateUserRequest, DeleteUsersRequest, UpdateUserRequest};
 use crate::guards::auth_guard::{AdminUser, AuthenticatedUser};
 use crate::interface::{Args, BaseService};
 use crate::routes::USER_REPO;
@@ -172,6 +172,30 @@ pub fn update_user(
                 updated_at: user.updated_at.to_string(),
             })
         })
+        .map_err(|error| error.status())
+}
+
+#[delete("/<id>", format = "json", data = "<data>")]
+pub fn delete_more_user_by_admin(
+    id: i32,
+    user: AdminUser,
+    connection: Connection,
+    data: Json<DeleteUsersRequest>,
+) -> Result<Status, Status> {
+    let mut connection = connection.0;
+
+    let args = Args {
+        actor_id: Some(user.0.user_id),
+        middle_id: Some(id),
+        targets_id: Some(data.into_inner().targets_id),
+        ..Default::default()
+    };
+
+    let user_ser = UserService::new(USER_REPO);
+
+    user_ser
+        .delete_more_model(args, &mut connection)
+        .map(|_| Status::NoContent)
         .map_err(|error| error.status())
 }
 

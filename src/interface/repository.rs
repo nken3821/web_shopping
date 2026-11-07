@@ -8,7 +8,7 @@ use diesel::{
 #[derive(QueryableByName)]
 pub struct LastInsertId {
     #[diesel(sql_type = Unsigned<BigInt>)]
-    id: u64,
+    pub id: u64,
 }
 
 pub trait BaseRepository {
@@ -25,8 +25,6 @@ pub trait BaseRepository {
             diesel::sql_query("SELECT LAST_INSERT_ID() as id").get_result(connection)?;
         Ok(result.id)
     }
-
-    // fn find_all(&self, connection: &mut MysqlConnection) -> QueryResult<Vec<Self::OutputModel>>;
 
     fn create(
         &self,
@@ -50,6 +48,12 @@ pub trait BaseRepository {
     fn delete(
         &self,
         model_id: Self::IdType,
+        connection: &mut MysqlConnection,
+    ) -> QueryResult<usize>;
+
+    fn delete_more(
+        &self,
+        list_model_id: Vec<Self::IdType>,
         connection: &mut MysqlConnection,
     ) -> QueryResult<usize>;
 }

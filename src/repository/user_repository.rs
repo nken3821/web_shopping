@@ -3,6 +3,7 @@ use diesel::{
 };
 
 use crate::interface::BaseRepository;
+use crate::schema::users::id;
 use crate::{
     models::{NewUser, UpdateUser, User},
     schema::users::{self},
@@ -54,6 +55,14 @@ impl BaseRepository for UserRepository {
     fn delete(&self, model_id: i32, connection: &mut MysqlConnection) -> QueryResult<usize> {
         diesel::delete(users::table.find(model_id)).execute(connection)
     }
+
+    fn delete_more(
+        &self,
+        list_model_id: Vec<i32>,
+        connection: &mut MysqlConnection,
+    ) -> QueryResult<usize> {
+        diesel::delete(users::table.filter(id.eq_any(list_model_id))).execute(connection)
+    }
 }
 
 impl UserRepository {
@@ -70,5 +79,10 @@ impl UserRepository {
 
     pub fn find_all(&self, connection: &mut MysqlConnection) -> QueryResult<Vec<User>> {
         users::table.select(User::as_select()).load(connection)
+    }
+
+    pub fn get_role(&self, user_id: i32, connection: &mut MysqlConnection) -> QueryResult<String> {
+        let role = Self.find_by_id(user_id, connection).map(|user| user.role);
+        role
     }
 }

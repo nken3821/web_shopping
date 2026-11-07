@@ -1,9 +1,12 @@
+use crate::models::User;
+use crate::schema::addresses;
 use chrono::NaiveDateTime;
 use diesel::associations::Identifiable;
-use diesel::{Selectable, associations::Associations, deserialize::Queryable, prelude::Insertable, query_builder::AsChangeset};
+use diesel::{
+    Selectable, associations::Associations, deserialize::Queryable, prelude::Insertable,
+    query_builder::AsChangeset,
+};
 use serde::Serialize;
-use crate::{schema::addresses};
-use crate::models::User;
 
 #[derive(Selectable, Queryable, Associations, Identifiable, Serialize)]
 #[diesel(table_name = addresses, belongs_to(User))]
@@ -43,9 +46,8 @@ pub struct UpdateAdress {
     pub district: Option<String>,
     pub ward: Option<String>,
     pub street: Option<String>,
-    pub is_default: Option<bool>, 
+    pub is_default: Option<bool>,
 }
-
 
 #[derive(Serialize)]
 pub struct UserWithAddresses {

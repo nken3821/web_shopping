@@ -20,3 +20,8 @@ pub struct CreateAddressRequest {
     pub ward: String,
     pub street: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteAddressesRequest {
+    pub targets_id: Vec<i32>,
+}
